@@ -1,7 +1,7 @@
 (ns clojure.clr.emit
   (:import
-   [System.Reflection TypeAttributes PropertyAttributes MethodAttributes FieldAttributes EventAttributes CallingConventions MethodImplAttributes BindingFlags]
-   [System.Reflection.Emit TypeBuilder PropertyBuilder MethodBuilder ILGenerator]
+   [System.Reflection TypeAttributes PropertyAttributes MethodAttributes FieldAttributes EventAttributes CallingConventions MethodImplAttributes BindingFlags AssemblyName]
+   [System.Reflection.Emit TypeBuilder PropertyBuilder MethodBuilder ILGenerator AssemblyBuilder AssemblyBuilderAccess OpCodes]
    [System.Runtime.InteropServices CallingConvention CharSet Marshal]
    [clojure.lang Compiler]
    [clojure.lang.CljCompiler.Ast GenContext]))
@@ -20,15 +20,30 @@
 (defn cur-gen-context []
   (or @cur-gen-context-var Compiler/EvalContext))
 
-(defn- make-typed-array [type elems]
+(defn make-typed-array [type elems]
   (let [n (count elems)
         res (make-array type n)]
     (doall (map-indexed #(aset res % %2) elems))
     res))
 
+(defn type-array [& elems]
+  (make-typed-array Type elems))
+
+(defn obj-array [& elems]
+  (make-typed-array Object elems))
+
 (comment (defn wrap-gen-context [gen-func]
            (let [ctxt (GenContext/CreateWithInternalAssembly (str "__data__gen__" (swap! _save-id inc)) false)]
              (gen-func ctxt))))
+
+(defn clr-assembly* [name access]
+  (AssemblyBuilder/DefineDynamicAssembly
+    (AssemblyName. name)
+    (enum-key AssemblyBuilderAccess access)))
+
+(defn clr-module*
+  ([^AssemblyBuilder asm 
+    ]))
 
 (defn clr-type*
   ([^GenContext gen-ctxt name attrs parent ifaces]
@@ -104,3 +119,16 @@
     (set-dg-impl-flags cb)
     (set-dg-impl-flags mb)
     (.CreateType tb)))
+
+(def ^:dynamic *ilgen* nil)
+
+(defn- get-opcode [opcode]
+  (.GetValue (.GetField OpCodes (name opcode)) nil))
+
+(defn op
+  ([opcode]
+     (.Emit *ilgen* (get-opcode opcode)))
+  ([opcode arg]
+     (.Emit *ilgen* (get-opcode opcode) arg)))
+
+(defn abc [] "123")
