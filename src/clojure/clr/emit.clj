@@ -1,7 +1,7 @@
 (ns clojure.clr.emit
   (:import
    [System.Reflection TypeAttributes PropertyAttributes MethodAttributes FieldAttributes EventAttributes CallingConventions MethodImplAttributes BindingFlags AssemblyName]
-   [System.Reflection.Emit TypeBuilder PropertyBuilder MethodBuilder ILGenerator AssemblyBuilder AssemblyBuilderAccess OpCodes]
+   [System.Reflection.Emit TypeBuilder PropertyBuilder MethodBuilder ILGenerator AssemblyBuilder AssemblyBuilderAccess OpCodes EnumBuilder CustomAttributeBuilder]
    [System.Runtime.InteropServices CallingConvention CharSet Marshal]
    [clojure.lang Compiler]
    [clojure.lang.CljCompiler.Ast GenContext]))
@@ -120,6 +120,22 @@
     (set-dg-impl-flags mb)
     (.CreateType tb)))
 
+(defn clr-enum*
+  ([gen-ctxt name attrs ^Type underlying-type flags? literals]
+     (let [^EnumBuilder enum-builder (.DefineEnum (.ModuleBuilder gen-ctxt)
+                                     name
+                                     (enum-keys TypeAttributes attrs)
+                                     underlying-type)]
+       (when flags?
+         (.SetCustomAttribute enum-builder
+                              (CustomAttributeBuilder.
+                               (.GetConstructor FlagsAttribute
+                                                Type/EmptyTypes)
+                               (obj-array))))
+       (doseq [[name value] literals]
+         (.DefineLiteral (name name) value))
+       (.CreateType enum-builder))))
+
 (def ^:dynamic *ilgen* nil)
 
 (defn- get-opcode [opcode]
@@ -131,4 +147,3 @@
   ([opcode arg]
      (.Emit *ilgen* (get-opcode opcode) arg)))
 
-(defn abc [] "123")
