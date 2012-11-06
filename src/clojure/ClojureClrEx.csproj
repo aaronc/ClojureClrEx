@@ -8,7 +8,7 @@
     <ProjectGuid>{D07C4ED6-0C91-4885-953F-05E8CEDA8FED}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>ClojureClrEx</RootNamespace>
+    <RootNamespace>clojure</RootNamespace>
     <AssemblyName>ClojureClrEx</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
