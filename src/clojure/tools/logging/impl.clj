@@ -37,46 +37,46 @@
   nil if not available."
   []
   (try
-    (Type/GetType "Common.Logging.LogManager, Common.Logging")
-    (eval
-      `(do
-        (extend Common.Logging.ILog
-          Logger
-          {:enabled?
-           (fn [^Common.Logging.ILog logger# level#]
-             (condp = level#
-               :trace (.IsTraceEnabled logger#)
-               :debug (.IsDebugEnabled logger#)
-               :info  (.IsInfoEnabled  logger#)
-               :warn  (.IsWarnEnabled  logger#)
-               :error (.IsErrorEnabled logger#)
-               :fatal (.IsFatalEnabled logger#)
-               (throw (ArgumentException. (str level#)))))
-           :write!
-           (fn [^Common.Logging.ILog logger# level# ^Exception e# msg#]
-             (let [^String msg# (str msg#)]
-               (if e#
-                 (condp = level#
-                   :trace (.Trace logger# msg# e#)
-                   :debug (.Debug logger# msg# e#)
-                   :info  (.Info  logger# msg# e#)
-                   :warn  (.Warn  logger# msg# e#)
-                   :error (.Error logger# msg# e#)
-                   :fatal (.Fatal logger# msg# e#)
-                   (throw (ArgumentException. (str level#))))
-                 (condp = level#
-                   :trace (.Trace logger# msg#)
-                   :debug (.Debug logger# msg#)
-                   :info  (.Info  logger# msg#)
-                   :warn  (.Warn  logger# msg#)
-                   :error (.Error logger# msg#)
-                   :fatal (.Fatal logger# msg#)
-                   (throw (ArgumentException. (str level#)))))))})
-        (reify LoggerFactory
-          (name [_#]
-            "Common.Logging")
-          (get-logger [_# logger-ns#]
-            (Common.Logging.LogManager/GetLogger ^String (str logger-ns#))))))
+    (when (Type/GetType "Common.Logging.LogManager, Common.Logging")
+      (eval
+       `(do
+          (extend Common.Logging.ILog
+            Logger
+            {:enabled?
+             (fn [^Common.Logging.ILog logger# level#]
+               (condp = level#
+                 :trace (.IsTraceEnabled logger#)
+                 :debug (.IsDebugEnabled logger#)
+                 :info  (.IsInfoEnabled  logger#)
+                 :warn  (.IsWarnEnabled  logger#)
+                 :error (.IsErrorEnabled logger#)
+                 :fatal (.IsFatalEnabled logger#)
+                 (throw (ArgumentException. (str level#)))))
+             :write!
+             (fn [^Common.Logging.ILog logger# level# ^Exception e# msg#]
+               (let [^String msg# (str msg#)]
+                 (if e#
+                   (condp = level#
+                     :trace (.Trace logger# msg# e#)
+                     :debug (.Debug logger# msg# e#)
+                     :info  (.Info  logger# msg# e#)
+                     :warn  (.Warn  logger# msg# e#)
+                     :error (.Error logger# msg# e#)
+                     :fatal (.Fatal logger# msg# e#)
+                     (throw (ArgumentException. (str level#))))
+                   (condp = level#
+                     :trace (.Trace logger# msg#)
+                     :debug (.Debug logger# msg#)
+                     :info  (.Info  logger# msg#)
+                     :warn  (.Warn  logger# msg#)
+                     :error (.Error logger# msg#)
+                     :fatal (.Fatal logger# msg#)
+                     (throw (ArgumentException. (str level#)))))))})
+          (reify LoggerFactory
+            (name [_#]
+              "Common.Logging")
+            (get-logger [_# logger-ns#]
+              (Common.Logging.LogManager/GetLogger ^String (str logger-ns#)))))))
     (catch Exception e nil)))
 
 (defn find-factory
@@ -84,8 +84,9 @@
   []
   (or
    (common-logging-factory)
-   (throw 
-    (Exception.
-     "Valid logging implementation could not be found."))))
+   (comment
+     (throw 
+      (Exception.
+       "Valid logging implementation could not be found.")))))
 
 
