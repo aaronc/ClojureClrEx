@@ -1,6 +1,6 @@
 (ns clojure.clr.emit
   (:import
-   [System.Reflection TypeAttributes PropertyAttributes MethodAttributes FieldAttributes EventAttributes CallingConventions MethodImplAttributes BindingFlags AssemblyName]
+   [System.Reflection TypeAttributes PropertyAttributes MethodAttributes FieldAttributes EventAttributes CallingConventions MethodImplAttributes BindingFlags AssemblyName Assembly]
    [System.Reflection.Emit TypeBuilder PropertyBuilder MethodBuilder ILGenerator AssemblyBuilder AssemblyBuilderAccess OpCodes EnumBuilder CustomAttributeBuilder]
    [System.Runtime.InteropServices CallingConvention CharSet Marshal]
    [clojure.lang Compiler]
@@ -14,11 +14,13 @@
 (defn- enum-key [enum-type key]
   (enum-val enum-type (name key)))
 
+(def ^:dynamic *gen-context* nil)
+
 (let [ctxt-field (.GetField Compiler "CompilerContextVar" (enum-keys BindingFlags [:Static :NonPublic :Public]))]
   (def cur-gen-context-var (.GetValue ctxt-field nil)))
 
 (defn cur-gen-context []
-  (or @cur-gen-context-var Compiler/EvalContext))
+  (or *gen-context* @cur-gen-context-var Compiler/EvalContext))
 
 (defn make-typed-array [type elems]
   (let [n (count elems)
@@ -70,6 +72,15 @@
      (clr-property* tb name type :None nil)))
 
 (def ^:private get-set-attrs [:Public :SpecialName :HideBySig])
+
+
+(def ^:dynamic *type-builder* nil)
+
+(def ^:dynamic *property-builder* nil)
+
+(def ^:dynamic *ilgen* nil)
+
+(def ^:dynamic *method-builder* nil)
 
 (defn clr-method*
   ([^TypeBuilder tb name attrs ret-type param-types]
@@ -136,8 +147,6 @@
          (.DefineLiteral (name name) value))
        (.CreateType enum-builder))))
 
-(def ^:dynamic *ilgen* nil)
-
 (defn- get-opcode [opcode]
   (.GetValue (.GetField OpCodes (name opcode)) nil))
 
@@ -147,3 +156,22 @@
   ([opcode arg]
      (.Emit *ilgen* (get-opcode opcode) arg)))
 
+(defmacro get-member [])
+
+(defmacro get-local [])
+
+(defn method*
+  [name metadata params body-func])
+
+(defmacro method [])
+
+(defmacro property [])
+
+;;(defmacro event)
+
+(defn defclrtype* [name metadata body-fn])
+
+(defmacro defclrtype [name & body]
+  `(defclrtype* ~(name name) ~(meta name)
+     (fn ~(symbol (str (name name) "-body-fn"))
+       ~@body)))
