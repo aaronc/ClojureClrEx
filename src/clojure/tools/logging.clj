@@ -131,15 +131,32 @@
   (let [logger (impl/get-logger *logger-factory* logger-ns)
         sb (System.Text.StringBuilder.)]
     (proxy [System.IO.StringWriter] [sb]
-      (Flush []
-                                        ; deal with reflection in proxy-super
-        (let [^System.IO.StringWriter this this]
-          (proxy-super Flush)
-          (let [message (.Trim (.ToString this))]
-            (.Clear sb)
-            (if (> (.Length message) 0)
-              (log* logger level nil message))))))
-    true))
+             (Flush []
+               (let [^System.IO.StringWriter this this]
+                 (proxy-super Flush)
+                 (let [message (.Trim (.ToString this))]
+                   (.Clear sb)
+                   (if (> (.Length message) 0)
+                     (log* logger level nil message))))))))
+
+;; (defn log-stream
+;;   "Creates a PrintStream that will output to the log at the specified level."
+;;   [level logger-ns]
+;;   (let [logger (impl/get-logger *logger-factory* logger-ns)
+;;         sb (System.Text.StringBuilder.)]
+;;     (proxy [System.IO.TextWriter] []
+;;       (get_Encoding [] System.Text.Encoding/Unicode)
+;;       (Write [& args]
+;;         (if (and (= 1 (count args)) (instance? Char (first args)))
+;;           (let [ch (first args)]
+;;             (.Append sb )
+;;             (when (= ch \newline)
+;;               (let [message (.Trim (.ToString sb))]
+;;                 (.Clear sb)
+;;                 (if (> (.Length message) 0)
+;;                   (log* logger level nil message)))))
+;;           (apply proxy-super Write args))))))
+
 
 (let [orig (atom nil)    ; holds original System.out and System.err
       monitor (Object.)] ; sync monitor for calling setOut/setErr
@@ -186,10 +203,8 @@
                                        arg
                                        [arg :info :error])]
     (if (and logger-ns (seq body))
-      `(binding [*out* (java.io.OutputStreamWriter.
-                         (log-stream ~out-level ~logger-ns))
-                 *err* (java.io.OutputStreamWriter.
-                         (log-stream ~err-level ~logger-ns))]
+      `(binding [*out* (log-stream ~out-level ~logger-ns)
+                 *err* (log-stream ~err-level ~logger-ns)]
          ~@body))))
 
 

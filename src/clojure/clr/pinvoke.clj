@@ -3,14 +3,25 @@
 
 (def ^:private _save-id (atom 0))
 
-(defmacro dllimport [dll name ret params]
+;; (defn dllimport* [dll-name fn-name ret-type param-types]
+;;   (defclrtype* (clojure.lang.Compiler/munge
+;;                 (str dll-name "/" fn-name (swap! _save-id inc)))
+;;     {:extends clojure.lang.AFn}
+;;     (fn dll-import-def-fn []
+;;       (method invoke))))
+
+(defn dllimport* [dll-name fn-name ret-type param-types]
   (let [gen-ctxt (cur-gen-context)
         tb (clr-type* gen-ctxt (str "pinvoke__" (swap! _save-id inc)))
-        mname (str name)
-        mb (clr-pinvoke* tb mname dll (eval ret) (eval params))
-        ptype (.CreateType tb)]
-    `(clojure.core/defn ~name [& args#]
-       (.Invoke (.GetMethod ~ptype ~mname) nil (clojure.core/to-array args#)))))
+        mname (str fn-name)
+        mb (clr-pinvoke* tb mname dll-name ret-type (into-array Type param-types))
+        ptype (.CreateType tb)
+        invoke-method (.GetMethod ptype mname)]
+    (fn pinvoke-wrapper [& args] (.Invoke invoke-method nil (into-array Object args)))))
+
+(defmacro dllimport [dll fn-name ret params]
+  `(def ~fn-name
+     (dllimport* ~dll ~(name fn-name) ~ret ~params)))
 
 (defmacro dllimports [dll & imports]
   `(do ~@(for [imp imports]
