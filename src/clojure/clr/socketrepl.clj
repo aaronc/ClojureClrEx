@@ -22,13 +22,17 @@
     (.AuthenticateAsClient ssl-stream ssl-server-name)
     ssl-stream))
 
+(defn- decode-target [target]
+  (re-matches #"(([^@]+)@)?(([^:]+):)?(\d+)" target))
+
 (defn start-repl-client
   [target & {:keys [ssl-cert]}]
-  (if-let [[_ _ ssl-server-name _ host port] (re-matches #"(([^@]+)@)?(([^:]+):)?(\d+)" target)]
-    (let [host (if (empty? host) "localhost")]
+  (if-let [[_ _ ssl-server-name _ host port] (decode-target target)]
+    (let [host (if (empty? host) "localhost" host)]
+      (println host port)
       (with-open [client (System.Net.Sockets.TcpClient. host port)
                   stream (.GetStream client)
-                  stream (if ssl-server-name (client-ssl-stream stream ssl-server-name ssl-cert) stream)
+                  ;;stream (if ssl-server-name (client-ssl-stream stream ssl-server-name ssl-cert) stream)
                   writer (System.IO.StreamWriter. stream)
                   reader (System.IO.StreamReader. stream)]
         (let [request-prompt (Object.)
@@ -61,7 +65,7 @@
   (try
     (let [client (.AcceptTcpClient server)
           stream (.GetStream client)
-          stream (if ssl-cert (server-ssl-stream stream ssl-cert validate-client-cert) stream)
+          ;;stream (if ssl-cert (server-ssl-stream stream ssl-cert validate-client-cert) stream)
           reader (System.IO.StreamReader. stream)
           writer (System.IO.StreamWriter. stream)]
       (set! (.AutoFlush writer) true)
@@ -91,10 +95,14 @@
 
 (defn- repl-server-proc [port running ssl-cert validate-client-cert]
   (let [server (TcpListener. (first (.AddressList (Dns/GetHostEntry "localhost"))) port)]
-    (try (.Start server)
-         (while @running
-           (accept-client server ssl-cert validate-client-cert))
-         (finally (.Stop server)))))
+    (try
+      (.Start server)
+      (while @running
+        (log/info "Listening for REPL connections on port" port)
+        (accept-client server ssl-cert validate-client-cert))
+      (finally
+        (.Stop server)
+        (log/info "REPL server closed")))))
 
 (defn start-repl-server
   [port & {:keys [ssl-cert validate-client-cert]}]
